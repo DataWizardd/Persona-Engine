@@ -1,0 +1,76 @@
+---
+job: extension
+config:
+  
+  name: "ohui_gg_flux"
+  process:
+    - type: 'sd_trainer'
+      # [학습 데이터셋 설정]
+      training_folder: "/workspace/dataset"  
+      device: cuda:0
+      trigger_word: "ohui_gg_woman"         
+      
+      network:
+        type: "lora"
+        linear: 16      # LoRA Rank (16~32)
+        linear_alpha: 16
+        
+      # [저장 설정]
+      save:
+        dtype: float16
+        save_every: 250       # 250스텝마다 모델 저장
+        max_step_saves_to_keep: 4
+        
+      # [데이터셋 처리 설정]
+      datasets:
+        - folder_path: "/workspace/dataset"  
+          caption_ext: "txt"
+          caption_dropout_rate: 0.05
+          shuffle_tokens: false
+          cache_latents_to_disk: true
+          resolution: [512, 768]  # [1024, 1024]
+
+      # [학습 하이퍼파라미터]
+      train:
+        batch_size: 1
+        steps: 2000           # 총 학습 스텝 수
+        gradient_accumulation_steps: 1
+        train_unet: true
+        train_text_encoder: false  
+        content_or_style: balanced
+        optimizer: "adamw8bit"     # 8bit 옵티마이저 (메모리 절약)
+        lr: 0.0004                 # 학습률 (0.0001 ~ 0.0004)
+        
+        dtype: "bf16"              
+        skip_first_sample: true    # 첫 샘플링 생략 (초반 에러 방지)
+
+        # [EMA 설정 - 선택사항]
+        ema_config:
+          use_ema: true
+          ema_decay: 0.99
+
+      # [모델 로드 설정]
+      model:
+        name_or_path: "black-forest-labs/FLUX.1-dev"
+        is_flux: true
+        quantize: true        # 모델 양자화 로드
+        low_vram: true        
+        
+      # [샘플링 설정] 
+      sample:
+        sampler: "flowmatch"
+        sample_every: 250
+        width: 512            # 샘플 이미지 크기 
+        height: 768
+        prompts:
+          - "ohui_gg_woman, holding a cup of coffee, looking at viewer, soft lighting"
+          - "ohui_gg_woman, wearing a white dress, standing in a garden, realistic, 8k"
+        neg: ""               
+        seed: 42
+        walk_seed: true
+        guidance_scale: 4
+        sample_steps: 20
+
+meta:
+  name: "[Flux] G.G. Persona LoRA"
+  version: '1.0'
